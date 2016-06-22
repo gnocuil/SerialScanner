@@ -13,6 +13,8 @@ public:
     
     std::string scan();
     
+    std::string scan16();
+    
     std::string path;
     
 private:

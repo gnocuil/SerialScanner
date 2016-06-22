@@ -16,7 +16,7 @@ public:
     Image(CImg<unsigned char> img_, Image* parent, std::string prefix_);//sub-image obj from another Image
     ~Image();
     
-    std::string search(int threshold_);
+    std::vector<std::string> search(int threshold_);
     
     std::string recognize();
     
@@ -38,6 +38,7 @@ public:
     void findChar();
     
     char ocr(const CImg<unsigned char>& img);
+    std::string ocr16(const CImg<unsigned char>& img);
     
     std::string prefix;
     

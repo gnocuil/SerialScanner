@@ -37,15 +37,16 @@ int main(int argc, char **argv)
     }
     
     if (filename.size() > 0) {
-        string ret = single(filename);
+        vector<string> ret = single(filename);
         if (ret.size() > 0) {
-            printf("result: %s\n", ret.c_str());
+            printf("result numbers: %d\n", (int)ret.size());
         } else {
             printf("Not recognized...\n");
         }
     } else if (folder.size() > 0) {
         //doit_folder(folder);
-        printf("TODO...\n");
+        multiple(folder);
+        //printf("TODO...\n");
     } else {
         help();
     }

@@ -52,6 +52,16 @@ Image::Image(string filename)
             
         }
     }
+    /*
+    for (int i = 0; i < h; ++i) {
+        //image(0,i,0) = 0;
+        //image(0,i,1) = 0;
+        //image(0,i,2) = 0;
+        image(image.width()-1,i,0) = 0;
+        image(image.width()-1,i,1) = 0;
+        image(image.width()-1,i,2) = 0;
+    }
+    */
     prefix = "debug/1_";
     
     //image.display("test1");
@@ -92,8 +102,9 @@ Image::~Image()
 }
 
 
-string Image::search(int threshold_)
+vector<string> Image::search(int threshold_)
 {
+    vector<string> serials;
     threshold = threshold_;
     int w=image.width();
     int h=image.height();
@@ -108,6 +119,7 @@ string Image::search(int threshold_)
                 bi[i][j] = WHITE;
         }
     }
+
     
     //TODO: replace all existing rects
     CImg<unsigned char> bimg(image);
@@ -168,7 +180,7 @@ string Image::search(int threshold_)
             if (sparse < 6) continue;//should be sparse
             //if (per < 0.04) continue;//compare with WHOLE picture witout cropping
             if (per > 0.5) continue;//compare with WHOLE picture witout cropping
-            //if (ratio < 4) continue;//should be a LONG area
+            if (ratio < 2) continue;//should be a LONG area
             //printf("        %d: cnt=%d area=%d ratio=%.2lf per=%.5lf sparse=%.2lf\n",tot,cnt,area,ratio,per,sparse);
             printf("found! tot=%d area=%d cnt=%d sparse=%.2lf per=%.2lf ratio=%.2lf\n",tot,area,cnt,sparse,per,ratio);  
             
@@ -178,9 +190,15 @@ string Image::search(int threshold_)
             sprintf(prefix, "part%d_", tot++);
             Image subimg(img2, this, prefix);
             
-            subimg.recognize();
+            string ret = subimg.recognize();
             
-            printf("over w=%d h=%d\n",w,h);
+            //cout << "over w,h="<<w<<","<<h<<" : ["<<ret<<"]"<<endl;
+            if (ret.size() > 0) {
+                serials.push_back(ret);
+                for (int i2 = h1; i2 <= h2; ++i2)
+                    for (int j2 = w1; j2 <= w2; ++j2)
+                        bi[i2][j2]=WHITE;
+            }
             
             //sprintf(tt,"debug/3_part_%d.jpg", tot++);
             //img2.save(tt);
@@ -194,7 +212,7 @@ string Image::search(int threshold_)
     }
     delete[] bi;
     //printf("return...\n");
-    return "";
+    return serials;
 }
 
 int Image::countLine(const CImg<unsigned char>& img, int line)
@@ -227,18 +245,65 @@ int Image::count(const CImg<unsigned char>& img)
 }
 
 void Image::rotate()
-{
+{/*
     const double RANGE = 5;
-    const double step = 0.1;
+    double step = 0.2;
+    
+    int mx = count(image);
+    double best = 0;
+    CImg<unsigned char> img_m = image.get_rotate(-step, 1, 1);
+    int minus = count(img_m);
+    CImg<unsigned char> img_p = image.get_rotate(step, 1, 1);
+    int plus = count(img_p);
+    double start = -RANGE;
+    double end = RANGE;
+    bool mi = false;
+    if (minus > plus) {
+        mi = true;
+        if (minus > mx) {
+            mx = minus;
+            best = -step;
+        }
+    } else {
+        if (plus > mx) {
+            mx = plus;
+            best = step;
+        }
+    }
+    int decrease = 0;
+    for (double d = step*2; d <= RANGE; d+=step) {
+        double cur = d;
+        if (mi) cur=-d;
+        CImg<unsigned char> img2 = image.get_rotate((float)cur, 1, 1);
+        int cnt = count(img2);
+        if (cnt>mx) {
+            mx = cnt;
+            best = d;
+        }
+        if (cnt < mx) {
+            ++decrease;
+            if (decrease > 3)
+                break;
+        }
+    }
+    if (fabs(best)>1e-5) {
+        image.rotate((float)best, 1, 1);
+    }*/
+    
+    const double RANGE = 3;
+    double step = 0.2;
+    
     int mx = 0;
     double best = 0;
     for (double d = -RANGE; d <= RANGE; d+=step) {
-        CImg<unsigned char> img2 = image.get_rotate((float)d, 1, 1);
-        int cur = count(img2);
-        if (cur>mx) {
-            mx = cur;
+        double cur = d;
+        CImg<unsigned char> img2 = image.get_rotate((float)cur, 1, 1);
+        int cnt = count(img2);
+        if (cnt>mx) {
+            mx = cnt;
             best = d;
         }
+        //printf("ROT: d=%.2lf  cnt=%d\n", d, cnt);
     }
     if (fabs(best)>1e-5) {
         image.rotate((float)best, 1, 1);
@@ -248,24 +313,24 @@ void Image::rotate()
 vector<Image> Image::cut()
 {
     vector<Image> ret;
-    FILE *fout=fopen((prefix+"2_.txt").c_str(),"w");
+    //FILE *fout=fopen((prefix+"2_.txt").c_str(),"w");
     
     //image.crop(0,h/6,0,0,w-1-w/12,h-1-h/7,0,2);
     int last = 0;
     int id = 0;
     for (int i = 0; i < image.height(); ++i) {
         int cnt = countLine(image, i);
-        fprintf(fout, "%d: %d / %d (%.4lf)\n", i, cnt, image.width(), cnt*1.0/image.width());
+        //fprintf(fout, "%d: %d / %d (%.4lf)\n", i, cnt, image.width(), cnt*1.0/image.width());
         if (cnt*2>image.width()) {
             if (i - last + 1 > 10) {//count
-                printf("found last=%d cur=%d id=%d\n", last, i, id);
+                //printf("found last=%d cur=%d id=%d\n", last, i, id);
                 ret.push_back(subImage(last, i, id));
                 id++;
             }
             last = i;
         }
     }
-    fclose(fout);
+    //fclose(fout);
     if (image.height() - 1 - last + 1 > 10) {
         ret.push_back(subImage(last, image.height() - 1, id));
         id++;
@@ -278,20 +343,22 @@ string Image::recognize()
     //int w=image.width();
     //int h=image.height();
     cout<<"recognize: "<<(prefix+".jpg")<<endl;
-    image.save((prefix+"1_orig.jpg").c_str());
+    image.save((prefix+"orig.jpg").c_str());
     //countLine();
     
     //TODO: rotate
     
     //image.rotate(-3, 1, 1);
+    cout<<"before rotate: "<<(prefix+".jpg")<<endl;
     rotate();
     //w=image.width();
     //h=image.height();
-    image.save((prefix+"2_rotate.jpg").c_str());
+    image.save((prefix+"rotate.jpg").c_str());
+    cout<<"after rotate: "<<(prefix+".jpg")<<endl;
     
     //TODO: cut
     vector<Image> vi = cut();
-    printf("cut images: %d\n", vi.size());
+    printf("cut images: %d\n", (int)vi.size());
     for (int i = 0; i < vi.size(); ++i) {
         //string filename=vi[i].prefix+"T1.jpg";
         //cout<<"FN: "<<filename<<endl;
@@ -339,6 +406,37 @@ string Image::recognize_2()
     save("#bina-crop");
     
     //ocr
+    string ret = "";
+    
+    int left = -1;
+    int cnt = 0;
+    for (int j = 0; j < image.width(); ++j) {
+        bool black = false;
+        for (int i = 0; i < image.height(); ++i)
+            if (image(j,i,0)<127) {
+                black = true;
+                break;
+            }
+        if (black) {
+            if (left < 0) left = j;
+        } else {
+            if (left >= 0) {
+                cnt++;
+                left = -1;
+            }
+        }
+    }
+    if (left >= 0) ++cnt;
+    if (cnt != NUM1+NUM2) {
+        printf("number of char not match 8+8, skip OCR!\n");
+        return "";
+    }
+    
+    string line16 = ocr16(image);
+    cout << "OCR LINE : "<<line16<<endl;
+    return line16;
+    
+    /*
     int left[20] = {-1};
     int right[20];
     int cnt = 0;
@@ -359,13 +457,14 @@ string Image::recognize_2()
             }
         }
     }
+    
     if (left[cnt] >= 0) ++cnt;
     if (cnt != NUM1 + NUM2) {
         printf("number length not match! failed...\n");
         return "";
     }
     cout << "begin OCR! prefix="<<prefix<<endl;
-    string ret = "";
+    
     for (int i = 0; i < cnt; ++i) {
         CImg<unsigned char> img = image.get_crop(left[i],0,0,0,right[i],image.height()-1,0,2);
         char tt[100] = {0};
@@ -379,7 +478,8 @@ string Image::recognize_2()
         ret += ch;
         if (ret.size() == 8) ret+=',';
     }
-    
+    cout << "OCR char: " << ret << endl;
+    */
     
     //check
     
@@ -388,7 +488,7 @@ string Image::recognize_2()
 
 void Image::findChar()
 {
-    puts("findchar!");
+    //puts("findchar!");
     int h = image.height();
     int w = image.width();
     int midh = h/2;
@@ -396,6 +496,40 @@ void Image::findChar()
     
     int mx = 0;
     int i, j;
+    
+    int ups = 0;
+    int left_cut = 0;
+    for (int j = 0; j < w; ++j) {
+        int up = 0;
+        int down = 0;
+        for (int i = 0; i < h; ++i) {
+            if (image(j,i,0)<127) {
+                if (i<h/4) ++up;
+                else ++down;
+            }
+        }
+        //cout << "    UP " << j << " " << up << " " << down << " " << ups << endl;
+        if (up+down>0) {
+            if (down == 0) {
+                ++ups;
+                left_cut=j+1;
+                
+            }
+            if (down > 0) {
+                if (ups > 8) {
+                    cout << "LEFT_CUT: " << prefix << " " << left_cut << " "<< ups << endl;
+                    image.crop(left_cut,0,0,0,w-1,h-1,0,2);
+                    h = image.height();
+                    w = image.width();
+                    midh = h/2;
+                    midw = w/2;
+                    break;
+                }
+                ups = 0;
+            }
+        }
+    }
+    
     
     for (i = midh; i >= 0; --i) {
         int cnt = 0;
@@ -439,39 +573,40 @@ void Image::findChar()
             last = j;
         }
     }
-    //printf("mx1=%d mx2=%d\n", mx1, mx2);
+    printf("mx1=%d mx2=%d\n", mx1, mx2);
     
     last = midw + w / 4;
     for (j = last; j < w; ++j) {
         bool black = false;
-        for (i = top; i <= down; ++i)
+        for (i = h/4; i <= down; ++i)
             if (image(j,i,0)<127) {
                 black = true;
                 break;
             }
-        if (j - last - 1 > mx2*2) break;
+        
         if (black) {
             last = j;
-        }
+        } else if (j - last - 1 > mx2*2)
+            break;
     }
     int right = j - 1;
-    //printf("right=%d\n", right);
+    printf("right=%d\n", right);
     
     last = midw - w / 4;
     for (j = last; j >= 0; --j) {
         bool black = false;
-        for (i = top; i <= down; ++i)
+        for (i = h/4; i <= down; ++i)
             if (image(j,i,0)<127) {
                 black = true;
                 break;
             }
-        if (last - j - 1 > mx2*2) break;
         if (black) {
             last = j;
-        }
+        } else if (last - j - 1 > mx2*2)
+            break;
     }
     int left = j + 1;
-    //printf("left=%d\n", left);
+    printf("left=%d\n", left);
     
     for (i = midh; i >= 0; --i) {
         bool black = false;
@@ -516,7 +651,7 @@ void Image::findChar()
         if (black) break;
         --right;
     }
-    printf("l-t-r-d %d %d %d %d\n", left, top, right, down);
+    //printf("l-t-r-d %d %d %d %d\n", left, top, right, down);
     image.crop(left,top,0,0,right,down,0,2);
 }
 
@@ -534,4 +669,21 @@ char Image::ocr(const CImg<unsigned char>& img)
         if (!isalnum(ret[0])) return 0;
     }
     return ret[0];
+}
+
+string Image::ocr16(const CImg<unsigned char>& img)
+{
+    img.save(ocr1.path.c_str());
+    string line = ocr1.scan16();
+    cout << "OCR:{" << line << "}" << endl;
+    string ret = "";
+    for (int i = 0; i < line.size(); ++i) {
+        if (isalnum(line[i])) {
+            if (ret.size()==8) return "";
+            ret += line[i];
+        } else if (line[i] == ' ' && ret.size()==8) ret+=',';
+        else if (!isspace(line[i])) return "";
+    }
+    if (ret.size() != NUM1+NUM2+1) return "";
+    return ret;
 }

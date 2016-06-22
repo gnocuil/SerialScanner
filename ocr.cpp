@@ -42,6 +42,24 @@ string OCR::scan()
     return ret;
 }
 
+string OCR::scan16()
+{
+    char *outText;
+    // Open input image with leptonica library
+    Pix *image = pixRead(path.c_str());
+    api->SetPageSegMode(tesseract::PSM_SINGLE_LINE);
+    api->SetVariable("tessedit_char_whitelist", "0123456789abcdefghijklmnopqrstuvwxyz");
+    api->SetImage(image);
+    // Get OCR result
+    outText = api->GetUTF8Text();
+    //printf("OCR output:\n%s", outText);
+    string ret = outText;
+
+    delete [] outText;
+    pixDestroy(&image);
+    return ret;
+}
+
 OCR::~OCR()
 {
     // Destroy used object and release memory
