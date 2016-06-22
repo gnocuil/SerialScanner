@@ -4,6 +4,7 @@
 #include <queue>
 #include <vector>
 #include "images.h"
+#include "ocr.h"
 
 using namespace std;
 
@@ -338,10 +339,51 @@ string Image::recognize_2()
     save("#bina-crop");
     
     //ocr
+    int left[20] = {-1};
+    int right[20];
+    int cnt = 0;
+    for (int j = 0; j < image.width(); ++j) {
+        bool black = false;
+        for (int i = 0; i < image.height(); ++i)
+            if (image(j,i,0)<127) {
+                black = true;
+                break;
+            }
+        if (black) {
+            if (left[cnt] < 0) left[cnt] = j;
+            right[cnt] = j;
+        } else {
+            if (left[cnt] >= 0) {
+                cnt++;
+                left[cnt] = -1;
+            }
+        }
+    }
+    if (left[cnt] >= 0) ++cnt;
+    if (cnt != NUM1 + NUM2) {
+        printf("number length not match! failed...\n");
+        return "";
+    }
+    cout << "begin OCR! prefix="<<prefix<<endl;
+    string ret = "";
+    for (int i = 0; i < cnt; ++i) {
+        CImg<unsigned char> img = image.get_crop(left[i],0,0,0,right[i],image.height()-1,0,2);
+        char tt[100] = {0};
+        sprintf(tt, "char%02d.jpg", i);
+        img.save((prefix+tt).c_str());
+        char ch = ocr(img);
+        if (ch == 0) {
+            printf("invalid char at pos %d, failed...\n", i);
+            return "";
+        }
+        ret += ch;
+        if (ret.size() == 8) ret+=',';
+    }
+    
     
     //check
     
-    return "";
+    return ret;
 }
 
 void Image::findChar()
@@ -481,4 +523,15 @@ void Image::findChar()
 void Image::save(string suffix)
 {
     image.save((prefix+suffix+".jpg").c_str());
+}
+
+char Image::ocr(const CImg<unsigned char>& img)
+{
+    img.save(ocr1.path.c_str());
+    string ret = ocr1.scan();
+    cout << "OCR:{" << ret << "}" << endl;
+    if (ret.size() >= 1) {
+        if (!isalnum(ret[0])) return 0;
+    }
+    return ret[0];
 }

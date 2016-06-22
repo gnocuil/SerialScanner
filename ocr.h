@@ -2,6 +2,7 @@
 
 #include <string>
 #include <tesseract/baseapi.h>
+#include <tesseract/publictypes.h>
 #include <leptonica/allheaders.h>
 #include <CImg.h>
 
@@ -12,10 +13,12 @@ public:
     
     std::string scan();
     
+    std::string path;
+    
 private:
     tesseract::TessBaseAPI *api;
-    std::string path;
+    
 
 };
 
-extern OCR ocr;
+extern OCR ocr1;

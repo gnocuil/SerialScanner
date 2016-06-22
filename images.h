@@ -6,6 +6,9 @@
 
 using namespace cimg_library;
 
+const int NUM1 = 8;
+const int NUM2 = 8;
+
 class Image {
 public:
     //Image();
@@ -33,6 +36,8 @@ public:
     int countLine(const CImg<unsigned char>& image, int line);
     
     void findChar();
+    
+    char ocr(const CImg<unsigned char>& img);
     
     std::string prefix;
     

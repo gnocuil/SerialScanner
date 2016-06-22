@@ -6,7 +6,7 @@
 
 using namespace std;
 
-OCR ocr(1);
+OCR ocr1(1);
 
 OCR::OCR(int id)
 {
@@ -29,11 +29,12 @@ string OCR::scan()
     char *outText;
     // Open input image with leptonica library
     Pix *image = pixRead(path.c_str());
-    api->SetPageSegMode(PSM_SINGLE_CHAR);
+    api->SetPageSegMode(tesseract::PSM_SINGLE_CHAR);
+    api->SetVariable("tessedit_char_whitelist", "0123456789abcdefghijklmnopqrstuvwxyz");
     api->SetImage(image);
     // Get OCR result
     outText = api->GetUTF8Text();
-    printf("OCR output:\n%s", outText);
+    //printf("OCR output:\n%s", outText);
     string ret = outText;
 
     delete [] outText;
