@@ -12,16 +12,24 @@ using namespace std;
 
 vector<string> single(string filename)
 {
-    printf("single %s\n", filename.c_str());
+    //printf("single %s\n", filename.c_str());
     Image img(filename);
-    //vector<string> ret = img.search(160);
-    vector<string> ret = img.search(120);
+    vector<string> ret = img.search(160);
+    if (ret.size() == 0) {
+        ret = img.search(100);
+        if (ret.size() == 0) {
+            ret = img.search(130);
+        }
+    }
+    //vector<string> ret = img.search(100);
+    //160~100
     //img.search(140);
     
+    cout << "------------" << filename << "------------" << endl;
     for (int i = 0; i < ret.size(); ++i)
         cout << ret[i] << endl;
-    
-    cout << "finished single\n" << endl;
+    cout << "------------" << "------------" << endl;
+    //cout << "finished single\n" << endl;
     
     return ret;
 }
@@ -29,7 +37,7 @@ vector<string> single(string filename)
 int multiple(string dirname)
 {
     string sn = dirname + "/_sn_.csv";
-    FILE *fout = fopen(sn.c_str(), "w");
+    
     //ofstream fout(sn);
 
     printf("check for dir %s\n", dirname.c_str());
@@ -49,23 +57,25 @@ int multiple(string dirname)
         closedir (dir);
         sort(vs.begin(), vs.end());
         int cnt = 0;
-        for (int i = 0; i < vs.size(); ++i) {
-            //if (i > 3) break;
-            string file = dirname+'/'+vs[i];
-            vector<string> ret = single(file);
-            if (ret.size()>0) {
-                printf("Recognized %d numbers in file %s\n", (int)ret.size(), file.c_str());
-                for (int j = 0; j < ret.size(); ++j)
-                    fprintf(fout, "%d,%s,%s\n", ++cnt, ret[j].c_str(), vs[i].c_str());
-            } else {
-                //fprintf(fout, "%d,,,,%s\n", i+1, vs[i].c_str());
-                printf("Not recognized in file %s\n", file.c_str());
+        if (vs.size() > 0) {
+            FILE *fout = fopen(sn.c_str(), "w");
+            for (int i = 0; i < vs.size(); ++i) {
+                //if (i > 3) break;
+                string file = dirname+'/'+vs[i];
+                vector<string> ret = single(file);
+                if (ret.size()>0) {
+                    printf("Recognized %d numbers in file %s\n", (int)ret.size(), file.c_str());
+                    for (int j = 0; j < ret.size(); ++j)
+                        fprintf(fout, "%d,%s,%s\n", ++cnt, ret[j].c_str(), vs[i].c_str());
+                } else {
+                    //fprintf(fout, "%d,,,,%s\n", i+1, vs[i].c_str());
+                    printf("Not recognized in file %s\n", file.c_str());
+                    fprintf(fout, ",,,%s\n", vs[i].c_str());
+                }
             }
+            fclose(fout);
         }
     } else {
         printf("Error reading dir %s\n", dirname.c_str());
     }
-
-    
-    fclose(fout);
 }

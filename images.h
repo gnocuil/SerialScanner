@@ -44,6 +44,8 @@ public:
     
     int threshold;
     
+    int debug;
+    
 private:
     CImg<unsigned char> image;
     //int w, h;

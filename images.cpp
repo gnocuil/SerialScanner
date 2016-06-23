@@ -5,6 +5,9 @@
 #include <vector>
 #include "images.h"
 #include "ocr.h"
+#include "timer.h"
+
+#define SHOW_ROTATE 1
 
 using namespace std;
 
@@ -15,6 +18,7 @@ const int WHITE = 1;
 
 Image::Image(string filename)
 {
+    debug = 0;
     threshold = 140;//TODO: default threshold
     printf("Image file %s\n", filename.c_str());
     image = CImg<unsigned char>(filename.c_str());
@@ -65,7 +69,7 @@ Image::Image(string filename)
     prefix = "debug/1_";
     
     //image.display("test1");
-    image.save((prefix+"gray.jpg").c_str());
+    if (debug) image.save((prefix+"gray.jpg").c_str());
 }
 
 Image::Image(CImg<unsigned char> img_, Image* parent, string prefix_)
@@ -75,6 +79,7 @@ Image::Image(CImg<unsigned char> img_, Image* parent, string prefix_)
     
     prefix = parent->prefix + prefix_;
     threshold = parent->threshold;
+    debug = parent->debug;
 }
 
 Image Image::subImage(int h1, int h2, int id)
@@ -132,9 +137,9 @@ vector<string> Image::search(int threshold_)
             bimg(j,i,2)=v;
         }
     }
-    bimg.save("debug/2_binary.jpg");
+    if (debug) bimg.save("debug/2_binary.jpg");
     
-    
+    Timer tbfs;
     int tot = 0;
     double best = 0;
     int bw1=-1, bw2, bh1, bh2;
@@ -182,10 +187,38 @@ vector<string> Image::search(int threshold_)
             if (per > 0.5) continue;//compare with WHOLE picture witout cropping
             if (ratio < 2) continue;//should be a LONG area
             //printf("        %d: cnt=%d area=%d ratio=%.2lf per=%.5lf sparse=%.2lf\n",tot,cnt,area,ratio,per,sparse);
-            printf("found! tot=%d area=%d cnt=%d sparse=%.2lf per=%.2lf ratio=%.2lf\n",tot,area,cnt,sparse,per,ratio);  
+            printf("found area! tot=%d area=%d cnt=%d sparse=%.2lf per=%.2lf ratio=%.2lf\n",tot,area,cnt,sparse,per,ratio);  
+            //tbfs.current("BFS");
             
             CImg<unsigned char> img2(image);
+            bool clearup = false;
+            bool cleardown = false;
+            if (h1>0) {
+                clearup = true;
+                h1--;
+            }
+            if (h2+1<h) {
+                cleardown = true;
+                h2++;
+            }
             img2.crop(w1,h1,0,0,w2,h2,0,2);
+            
+            if (clearup) {
+                for (int j = 0; j < img2.width(); ++j) {
+                    img2(j,0,0) = 255;
+                    img2(j,0,1) = 255;
+                    img2(j,0,2) = 255;
+                }
+            }
+            
+            if (cleardown) {
+                for (int j = 0; j < img2.width(); ++j) {
+                    img2(j,img2.height()-1,0) = 255;
+                    img2(j,img2.height()-1,1) = 255;
+                    img2(j,img2.height()-1,2) = 255;
+                }
+            }
+            
             char prefix[100] = {0};
             sprintf(prefix, "part%d_", tot++);
             Image subimg(img2, this, prefix);
@@ -199,6 +232,7 @@ vector<string> Image::search(int threshold_)
                     for (int j2 = w1; j2 <= w2; ++j2)
                         bi[i2][j2]=WHITE;
             }
+            tbfs.reset();
             
             //sprintf(tt,"debug/3_part_%d.jpg", tot++);
             //img2.save(tt);
@@ -293,11 +327,23 @@ void Image::rotate()
     const double RANGE = 3;
     double step = 0.2;
     
+    CImg<unsigned char> smallimg;
+    
+    if (image.width() > 1000)
+        smallimg = image.get_resize_halfXY();
+    else
+        smallimg = image;
+    
+    while (smallimg.width() > 500)
+        smallimg.resize_halfXY();
+    
+    //cout << "SMALLIMG size="<<smallimg.width()<<"x"<<smallimg.height()<<"  ("<<image.width()<<"x"<<image.height()<<")"<<endl;
+    
     int mx = 0;
     double best = 0;
     for (double d = -RANGE; d <= RANGE; d+=step) {
         double cur = d;
-        CImg<unsigned char> img2 = image.get_rotate((float)cur, 1, 1);
+        CImg<unsigned char> img2 = smallimg.get_rotate((float)cur, 1, 1);
         int cnt = count(img2);
         if (cnt>mx) {
             mx = cnt;
@@ -342,28 +388,34 @@ string Image::recognize()
 {
     //int w=image.width();
     //int h=image.height();
-    cout<<"recognize: "<<(prefix+".jpg")<<endl;
-    image.save((prefix+"orig.jpg").c_str());
+    cout<<"    recognize: "<<(prefix+".jpg")<<endl;
+    if (SHOW_ROTATE or debug) save("orig");
     //countLine();
     
     //TODO: rotate
     
     //image.rotate(-3, 1, 1);
-    cout<<"before rotate: "<<(prefix+".jpg")<<endl;
+    //cout<<"before rotate: "<<(prefix+".jpg")<<endl;
+    Timer t1;
     rotate();
+    ///t1.current("Rotate image");
     //w=image.width();
     //h=image.height();
-    image.save((prefix+"rotate.jpg").c_str());
-    cout<<"after rotate: "<<(prefix+".jpg")<<endl;
+    if (SHOW_ROTATE or debug) save("rotate");
+    //cout<<"after rotate: "<<(prefix+".jpg")<<endl;
     
     //TODO: cut
+    Timer t2;
     vector<Image> vi = cut();
-    printf("cut images: %d\n", (int)vi.size());
+    //t2.current("Cut image");
+    printf("    cut images into: %d parts\n", (int)vi.size());
     for (int i = 0; i < vi.size(); ++i) {
         //string filename=vi[i].prefix+"T1.jpg";
         //cout<<"FN: "<<filename<<endl;
         //vi[i].image.save(filename.c_str());
+        Timer t3;
         string cur = vi[i].recognize_2();
+        //t3.current("Recognize_2");
         if (cur.size()>0) return cur;
     }
     
@@ -378,8 +430,8 @@ string Image::recognize_2()
     if (h*3>w) return "";
     image.crop(0,h/6,0,0,w-1-w/12,h-1-h/7,0,2);
     string filename=prefix+"#orig.jpg";
-    cout << "FN: "<<filename<<' '<<image.width()<<" "<<image.height()<<endl;
-    image.save(filename.c_str());
+    //cout << "FN: "<<filename<<' '<<image.width()<<" "<<image.height()<<endl;
+    //image.save(filename.c_str());
     
     //binary
     for (int i = 0; i < image.height(); ++i)
@@ -395,7 +447,7 @@ string Image::recognize_2()
             image(j,i,1) = color;
             image(j,i,2) = color;
         }
-    save("#bina");
+    if (debug) save("#bina");
     
     //cut left-up
     
@@ -403,7 +455,7 @@ string Image::recognize_2()
     
     findChar();
     
-    save("#bina-crop");
+    if (debug) save("#bina-crop");
     
     //ocr
     string ret = "";
@@ -428,12 +480,14 @@ string Image::recognize_2()
     }
     if (left >= 0) ++cnt;
     if (cnt != NUM1+NUM2) {
-        printf("number of char not match 8+8, skip OCR!\n");
+        printf("    number of char not match 8+8, skip OCR!\n");
         return "";
     }
     
+    Timer tt;
     string line16 = ocr16(image);
-    cout << "OCR LINE : "<<line16<<endl;
+    //tt.current("ocr16");
+    cout << "    OCR LINE : "<<line16<<endl;
     return line16;
     
     /*
@@ -517,7 +571,7 @@ void Image::findChar()
             }
             if (down > 0) {
                 if (ups > 8) {
-                    cout << "LEFT_CUT: " << prefix << " " << left_cut << " "<< ups << endl;
+                    cout << "    LEFT_CUT: " << prefix << " " << left_cut << " "<< ups << endl;
                     image.crop(left_cut,0,0,0,w-1,h-1,0,2);
                     h = image.height();
                     w = image.width();
@@ -573,7 +627,7 @@ void Image::findChar()
             last = j;
         }
     }
-    printf("mx1=%d mx2=%d\n", mx1, mx2);
+    //printf("mx1=%d mx2=%d\n", mx1, mx2);
     
     last = midw + w / 4;
     for (j = last; j < w; ++j) {
@@ -590,7 +644,7 @@ void Image::findChar()
             break;
     }
     int right = j - 1;
-    printf("right=%d\n", right);
+    //printf("right=%d\n", right);
     
     last = midw - w / 4;
     for (j = last; j >= 0; --j) {
@@ -606,7 +660,7 @@ void Image::findChar()
             break;
     }
     int left = j + 1;
-    printf("left=%d\n", left);
+    //printf("left=%d\n", left);
     
     for (i = midh; i >= 0; --i) {
         bool black = false;
@@ -664,7 +718,7 @@ char Image::ocr(const CImg<unsigned char>& img)
 {
     img.save(ocr1.path.c_str());
     string ret = ocr1.scan();
-    cout << "OCR:{" << ret << "}" << endl;
+    cout << "    OCR:{" << ret << "}" << endl;
     if (ret.size() >= 1) {
         if (!isalnum(ret[0])) return 0;
     }
@@ -675,7 +729,9 @@ string Image::ocr16(const CImg<unsigned char>& img)
 {
     img.save(ocr1.path.c_str());
     string line = ocr1.scan16();
-    cout << "OCR:{" << line << "}" << endl;
+    while (line.size()>0 && isspace(line[line.size()-1]))
+        line.resize(line.size()-1);
+    cout << "    OCR:{" << line << "}" << endl;
     string ret = "";
     for (int i = 0; i < line.size(); ++i) {
         if (isalnum(line[i])) {
