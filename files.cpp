@@ -10,15 +10,26 @@
 
 using namespace std;
 
-vector<string> single(string filename)
+static int debug = 0;
+
+vector<string> single(string filename, int threshold = -1)
 {
+    debug = 1;
     //printf("single %s\n", filename.c_str());
     Image img(filename);
-    vector<string> ret = img.search(160);
-    if (ret.size() == 0) {
-        ret = img.search(100);
-        if (ret.size() == 0) {
-            ret = img.search(130);
+    img.debug = debug;
+    vector<string> ret;
+    if (threshold >= 0) {
+        ret = img.search(threshold);
+    } else {
+        int ths[] = {160, 100, 130, 180};
+        int n = sizeof(ths)/sizeof(int);
+        
+        for (int i = 0; i < n; ++i) {
+            vector<string> cur = img.search(ths[i]);
+            for (int j = 0; j < cur.size(); ++j)
+                ret.push_back(cur[j]);
+            //if (ret.size()>0) break;
         }
     }
     //vector<string> ret = img.search(100);
@@ -34,23 +45,31 @@ vector<string> single(string filename)
     return ret;
 }
 
-int multiple(string dirname)
+static vector<string> _multiple(string dirname, int depth)
 {
+    vector<string> ret;
+    if (depth == 0) return ret;
+    
+    debug = 0;
     string sn = dirname + "/_sn_.csv";
     
     //ofstream fout(sn);
 
     printf("check for dir %s\n", dirname.c_str());
     vector<string> vs;
+    vector<string> dirs;
     DIR *dir;
     struct dirent *ent;
     if ((dir = opendir (dirname.c_str())) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
             //printf ("%s\n", ent->d_name);
             string file(ent->d_name);
-            if (file.size()>4) {
+            if (ent->d_type == DT_DIR) {
+                if (file[0] != '.' or file.size()>=3)
+                    dirs.push_back(file);
+            } else if (file.size()>4) {
                 string sf = file.substr(file.size()-3);
-                if (sf=="jpg" || sf=="JPG" || sf=="png" || sf=="PNG")
+                if (sf=="jpg" || sf=="JPG" || sf=="jpeg" || sf=="JPEG" || sf=="png" || sf=="PNG")
                     vs.push_back(file);
             }
         }
@@ -62,20 +81,43 @@ int multiple(string dirname)
             for (int i = 0; i < vs.size(); ++i) {
                 //if (i > 3) break;
                 string file = dirname+'/'+vs[i];
-                vector<string> ret = single(file);
-                if (ret.size()>0) {
-                    printf("Recognized %d numbers in file %s\n", (int)ret.size(), file.c_str());
-                    for (int j = 0; j < ret.size(); ++j)
-                        fprintf(fout, "%d,%s,%s\n", ++cnt, ret[j].c_str(), vs[i].c_str());
+                vector<string> cur_ret = single(file);
+                if (cur_ret.size()>0) {
+                    printf("Recognized %d numbers in file %s\n", (int)cur_ret.size(), file.c_str());
+                    for (int j = 0; j < cur_ret.size(); ++j) {
+                        //cout<<cur_ret[j]<<endl;
+                        ret.push_back(cur_ret[j] + "," + file);
+                        fprintf(fout, "%d,%s,%s\n", ++cnt, cur_ret[j].c_str(), file.c_str());
+                    }
                 } else {
                     //fprintf(fout, "%d,,,,%s\n", i+1, vs[i].c_str());
                     printf("Not recognized in file %s\n", file.c_str());
-                    fprintf(fout, ",,,%s\n", vs[i].c_str());
+                    fprintf(fout, ",,,%s\n", file.c_str());
                 }
             }
             fclose(fout);
         }
+        //printf("ready for dir...\n");
+        if (dirs.size() > 0) {
+            for (int i = 0; i < dirs.size(); ++i) {
+                string next = dirname+'/'+dirs[i];
+                vector<string> nxtret = _multiple(next, depth-1);
+                for (int j = 0; j < nxtret.size(); ++j)
+                    ret.push_back(nxtret[j]);
+            }
+        }
     } else {
         printf("Error reading dir %s\n", dirname.c_str());
     }
+    return ret;
+}
+
+int multiple(string dirname, int depth)
+{
+    vector<string> ret = _multiple(dirname, depth);
+    FILE *fout = fopen("_sn_all_.csv", "w");
+    for (int i = 0; i < ret.size(); ++i)
+        fprintf(fout, "%d,%s\n", i+1, ret[i].c_str());
+    fclose(fout);
+    return ret.size();
 }

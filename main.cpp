@@ -18,8 +18,11 @@ void help()
 
 int main(int argc, char **argv)
 {
+    system("rm -f debug/*");
     string filename = "";
     string folder = "";
+    int threshold = -1;
+    int depth = 100;
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i],"-i")==0 && i+1<argc) {
             filename=argv[i+1];
@@ -31,22 +34,31 @@ int main(int argc, char **argv)
             if (folder.size()>1 && folder[folder.size()-1]=='/')
                 folder.resize(folder.size()-1);
             printf("folder: %s\n", folder.c_str());
+        } else if (strcmp(argv[i],"-t")==0 && i+1<argc) {
+            ++i;
+            sscanf(argv[i], "%d", &threshold);
+        } else if (strcmp(argv[i],"-d")==0 && i+1<argc) {
+            ++i;
+            sscanf(argv[i], "%d", &depth);
         } else {
             help();
         }
     }
     
     if (filename.size() > 0) {
-        vector<string> ret = single(filename);
+        vector<string> ret = single(filename, threshold);
         if (ret.size() > 0) {
             printf("result numbers: %d\n", (int)ret.size());
         } else {
             printf("Not recognized...\n");
         }
     } else if (folder.size() > 0) {
-        //doit_folder(folder);
-        multiple(folder);
-        //printf("TODO...\n");
+        int ret = multiple(folder, depth);
+        if (ret > 0) {
+            printf("result numbers: %d\n", ret);
+        } else {
+            printf("Not recognized...\n");
+        }
     } else {
         help();
     }

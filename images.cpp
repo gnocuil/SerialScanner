@@ -229,8 +229,12 @@ vector<string> Image::search(int threshold_)
             if (ret.size() > 0) {
                 serials.push_back(ret);
                 for (int i2 = h1; i2 <= h2; ++i2)
-                    for (int j2 = w1; j2 <= w2; ++j2)
+                    for (int j2 = w1; j2 <= w2; ++j2) {
                         bi[i2][j2]=WHITE;
+                        image(j2,i2,0)=255;
+                        image(j2,i2,1)=255;
+                        image(j2,i2,2)=255;
+                    }
             }
             tbfs.reset();
             
@@ -423,6 +427,15 @@ string Image::recognize()
     return "";
 }
 
+static int getTopPixes(const CImg<unsigned char>& img)
+{
+    int sum = 0;
+    for (int hh = 0; hh < img.height()/6; ++hh)
+        for (int ww = 0; ww < img.width(); ++ww)
+            if (img(ww,hh,0)<127) ++sum;
+    return sum;
+}
+
 string Image::recognize_2()
 {
     int w=image.width();
@@ -459,10 +472,11 @@ string Image::recognize_2()
     
     //ocr
     string ret = "";
-    
-    int left = -1;
     int cnt = 0;
+    int leftw[20] = {-1};
+    int rightw[20];
     for (int j = 0; j < image.width(); ++j) {
+        if (cnt > NUM1+NUM2) break;
         bool black = false;
         for (int i = 0; i < image.height(); ++i)
             if (image(j,i,0)<127) {
@@ -470,15 +484,16 @@ string Image::recognize_2()
                 break;
             }
         if (black) {
-            if (left < 0) left = j;
+            if (leftw[cnt] < 0) leftw[cnt] = j;
+            rightw[cnt] = j;
         } else {
-            if (left >= 0) {
+            if (leftw[cnt] >= 0) {
                 cnt++;
-                left = -1;
+                leftw[cnt] = -1;
             }
         }
     }
-    if (left >= 0) ++cnt;
+    if (leftw[cnt] >= 0) ++cnt;
     if (cnt != NUM1+NUM2) {
         printf("    number of char not match 8+8, skip OCR!\n");
         return "";
@@ -487,57 +502,49 @@ string Image::recognize_2()
     Timer tt;
     string line16 = ocr16(image);
     //tt.current("ocr16");
-    cout << "    OCR LINE : "<<line16<<endl;
-    return line16;
+    cout << "    OCR LINE : "<<line16<<endl;  
     
-    /*
-    int left[20] = {-1};
-    int right[20];
-    int cnt = 0;
-    for (int j = 0; j < image.width(); ++j) {
-        bool black = false;
-        for (int i = 0; i < image.height(); ++i)
-            if (image(j,i,0)<127) {
-                black = true;
-                break;
-            }
-        if (black) {
-            if (left[cnt] < 0) left[cnt] = j;
-            right[cnt] = j;
-        } else {
-            if (left[cnt] >= 0) {
-                cnt++;
-                left[cnt] = -1;
-            }
-        }
-    }
-    
-    if (left[cnt] >= 0) ++cnt;
-    if (cnt != NUM1 + NUM2) {
-        printf("number length not match! failed...\n");
-        return "";
-    }
-    cout << "begin OCR! prefix="<<prefix<<endl;
-    
+    int nxt = 0;
     for (int i = 0; i < cnt; ++i) {
-        CImg<unsigned char> img = image.get_crop(left[i],0,0,0,right[i],image.height()-1,0,2);
-        char tt[100] = {0};
-        sprintf(tt, "char%02d.jpg", i);
-        img.save((prefix+tt).c_str());
-        char ch = ocr(img);
-        if (ch == 0) {
-            printf("invalid char at pos %d, failed...\n", i);
-            return "";
+        //printf("i=%d width=%d left=%d right=%d\n", i, image.width(), leftw[i], rightw[i]);
+        CImg<unsigned char> img = image.get_crop(leftw[i],0,0,0,rightw[i],image.height()-1,0,2);
+        if (i==8) ++nxt;
+        if (line16[nxt] == 'u') {
+            bool w = false;
+            if (img(img.width()/2,img.height()/2,0)<127) w = true;
+            if (img(img.width()/2-1,img.height()/2,0)<127) w = true;
+            if (img(img.width()/2,img.height()/2+1,0)<127) w = true;
+            if (img(img.width()/2-1,img.height()/2+1,0)<127) w = true;
+            if (w)
+                line16[nxt] = 'w';
+        } else if (line16[nxt] == '5' or line16[nxt] == 's') {
+            if (getTopPixes(img)==0)
+                line16[nxt] = 's';
+            else
+                line16[nxt] = '5';
+        } else if (line16[nxt] == 'z' or line16[nxt] == '2') {
+            if (getTopPixes(img)==0)
+                line16[nxt] = 'z';
+            else
+                line16[nxt] = '2';
+        } else if (line16[nxt] == 'g' or line16[nxt] == '9') {
+            if (getTopPixes(img)==0)
+                line16[nxt] = 'g';
+            else
+                line16[nxt] = '9';
         }
-        ret += ch;
-        if (ret.size() == 8) ret+=',';
+        ++nxt;
+        if (debug) {
+            char tt[100] = {0};
+            sprintf(tt, "char%02d.jpg", i);
+            img.save((prefix+tt).c_str());
+        }
     }
-    cout << "OCR char: " << ret << endl;
-    */
+   
     
     //check
     
-    return ret;
+    return line16;
 }
 
 void Image::findChar()
