@@ -13,7 +13,7 @@ class Image {
 public:
     //Image();
     Image(std::string filename);//image obj from a local image file
-    Image(CImg<unsigned char> img_, Image* parent, std::string prefix_);//sub-image obj from another Image
+    Image(const CImg<unsigned char>& img_, Image* parent, std::string prefix_);//sub-image obj from another Image
     ~Image();
     
     std::vector<std::string> search(int threshold_);

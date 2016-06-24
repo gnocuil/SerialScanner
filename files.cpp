@@ -12,6 +12,20 @@ using namespace std;
 
 static int debug = 0;
 
+static int rid = 0;
+static FILE *fout_root = NULL;
+
+void printRoot(const vector<string>& ret, string filename)
+{
+    //printf("##########printRoot############# %d\n", ret.size());
+    
+    for (int i = 0; i < ret.size(); ++i) {
+        ++rid;
+        fprintf(fout_root, "%d,%s,%s\n", rid, ret[i].c_str(), filename.c_str());
+    }
+    fflush(fout_root);
+}
+
 vector<string> single(string filename, int threshold = -1)
 {
     debug = 1;
@@ -82,6 +96,7 @@ static vector<string> _multiple(string dirname, int depth)
                 //if (i > 3) break;
                 string file = dirname+'/'+vs[i];
                 vector<string> cur_ret = single(file);
+                if (cur_ret.size()>0) printRoot(cur_ret, file);
                 if (cur_ret.size()>0) {
                     printf("Recognized %d numbers in file %s\n", (int)cur_ret.size(), file.c_str());
                     for (int j = 0; j < cur_ret.size(); ++j) {
@@ -97,6 +112,7 @@ static vector<string> _multiple(string dirname, int depth)
             }
             fclose(fout);
         }
+        
         //printf("ready for dir...\n");
         if (dirs.size() > 0) {
             for (int i = 0; i < dirs.size(); ++i) {
@@ -114,10 +130,11 @@ static vector<string> _multiple(string dirname, int depth)
 
 int multiple(string dirname, int depth)
 {
+    fout_root = fopen("_sn_all_.csv", "w");
     vector<string> ret = _multiple(dirname, depth);
-    FILE *fout = fopen("_sn_all_.csv", "w");
-    for (int i = 0; i < ret.size(); ++i)
-        fprintf(fout, "%d,%s\n", i+1, ret[i].c_str());
-    fclose(fout);
+    
+    //for (int i = 0; i < ret.size(); ++i)
+    //    fprintf(fout, "%d,%s\n", i+1, ret[i].c_str());
+    fclose(fout_root);
     return ret.size();
 }
