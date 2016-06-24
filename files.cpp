@@ -85,7 +85,7 @@ static vector<string> _multiple(string dirname, int depth)
             } else if (file.size()>4) {
                 if (file == "ignore") ignore = true;
                 string sf = file.substr(file.size()-3);
-                if (sf=="jpg" || sf=="JPG" || sf=="jpeg" || sf=="JPEG" || sf=="png" || sf=="PNG")
+                if (sf=="jpg" || sf=="JPG" || sf=="peg" || sf=="PEG" || sf=="png" || sf=="PNG")
                     vs.push_back(file);
             }
         }

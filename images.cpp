@@ -8,7 +8,7 @@
 #include "timer.h"
 #include "my_exif.h"
 
-#define SHOW_ROTATE 1
+#define SHOW_ROTATE 0
 
 using namespace std;
 
@@ -26,7 +26,7 @@ static void setColor(CImg<unsigned char>& img, int w, int h, int color)
 Image::Image(string filename)
 {
     int ori = Orientation(filename.c_str());
-
+    if (ori>1) printf("  Orientation=%d\n", ori);
     debug = 0;
     threshold = 140;//TODO: default threshold
     printf("Image file %s\n", filename.c_str());
@@ -34,6 +34,8 @@ Image::Image(string filename)
     
     if (ori == 6) {//right rotate
         image.rotate(90);
+    } else if (ori == 8) {
+        image.rotate(-90);
     }
     
     //printf("ok width=%d height=%d depth=%d spectrum=%d\n", image.width(), image.height(), image.depth(), image.spectrum());
