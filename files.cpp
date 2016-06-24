@@ -74,6 +74,7 @@ static vector<string> _multiple(string dirname, int depth)
     vector<string> dirs;
     DIR *dir;
     struct dirent *ent;
+    bool ignore = false;
     if ((dir = opendir (dirname.c_str())) != NULL) {
         while ((ent = readdir (dir)) != NULL) {
             //printf ("%s\n", ent->d_name);
@@ -82,35 +83,40 @@ static vector<string> _multiple(string dirname, int depth)
                 if (file[0] != '.' or file.size()>=3)
                     dirs.push_back(file);
             } else if (file.size()>4) {
+                if (file == "ignore") ignore = true;
                 string sf = file.substr(file.size()-3);
                 if (sf=="jpg" || sf=="JPG" || sf=="jpeg" || sf=="JPEG" || sf=="png" || sf=="PNG")
                     vs.push_back(file);
             }
         }
         closedir (dir);
-        sort(vs.begin(), vs.end());
-        int cnt = 0;
-        if (vs.size() > 0) {
-            FILE *fout = fopen(sn.c_str(), "w");
-            for (int i = 0; i < vs.size(); ++i) {
-                //if (i > 3) break;
-                string file = dirname+'/'+vs[i];
-                vector<string> cur_ret = single(file);
-                if (cur_ret.size()>0) printRoot(cur_ret, file);
-                if (cur_ret.size()>0) {
-                    printf("Recognized %d numbers in file %s\n", (int)cur_ret.size(), file.c_str());
-                    for (int j = 0; j < cur_ret.size(); ++j) {
-                        //cout<<cur_ret[j]<<endl;
-                        ret.push_back(cur_ret[j] + "," + file);
-                        fprintf(fout, "%d,%s,%s\n", ++cnt, cur_ret[j].c_str(), file.c_str());
+        if (ignore) {
+            printf("Ignore current dir:%s\n", dirname.c_str());
+        } else {
+            sort(vs.begin(), vs.end());
+            int cnt = 0;
+            if (vs.size() > 0) {
+                FILE *fout = fopen(sn.c_str(), "w");
+                for (int i = 0; i < vs.size(); ++i) {
+                    //if (i > 3) break;
+                    string file = dirname+'/'+vs[i];
+                    vector<string> cur_ret = single(file);
+                    if (cur_ret.size()>0) printRoot(cur_ret, file);
+                    if (cur_ret.size()>0) {
+                        printf("Recognized %d numbers in file %s\n", (int)cur_ret.size(), file.c_str());
+                        for (int j = 0; j < cur_ret.size(); ++j) {
+                            //cout<<cur_ret[j]<<endl;
+                            ret.push_back(cur_ret[j] + "," + file);
+                            fprintf(fout, "%d,%s,%s\n", ++cnt, cur_ret[j].c_str(), file.c_str());
+                        }
+                    } else {
+                        //fprintf(fout, "%d,,,,%s\n", i+1, vs[i].c_str());
+                        printf("Not recognized in file %s\n", file.c_str());
+                        fprintf(fout, ",,,%s\n", file.c_str());
                     }
-                } else {
-                    //fprintf(fout, "%d,,,,%s\n", i+1, vs[i].c_str());
-                    printf("Not recognized in file %s\n", file.c_str());
-                    fprintf(fout, ",,,%s\n", file.c_str());
                 }
+                fclose(fout);
             }
-            fclose(fout);
         }
         
         //printf("ready for dir...\n");
