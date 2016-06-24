@@ -227,9 +227,9 @@ vector<string> Image::search(int threshold_)
             }
             
             Image subimg(img2, this, prefix);
-            
+            //puts("## before recognize");
             string ret = subimg.recognize();
-            
+            //puts("## after recognize");
             //cout << "over w,h="<<w<<","<<h<<" : ["<<ret<<"]"<<endl;
             if (ret.size() > 0) {
                 serials.push_back(ret);
@@ -457,7 +457,8 @@ string Image::recognize_2()
     int w=image.width();
     int h=image.height();
     if (h*3>w) return "";
-    image.crop(0,h/6,0,0,w-1-w/12,h-1-h/7,0,image.spectrum()-1);
+    //image.crop(0,h/6,0,0,w-1-w/12,h-1-h/7,0,image.spectrum()-1);
+    image.crop(0,h/6,0,0,w-1,h-1-h/7,0,image.spectrum()-1);
     string filename=prefix+"#orig.jpg";
     //cout << "FN: "<<filename<<' '<<image.width()<<" "<<image.height()<<endl;
     //image.save(filename.c_str());
@@ -527,13 +528,13 @@ string Image::recognize_2()
         return "";
     }
     string oldline = line16;
-    
+    //printf("# OCR debug #1, cnt=%d\n",cnt);
     int nxt = 0;
     for (int i = 0; i < cnt; ++i) {
         //printf("i=%d width=%d left=%d right=%d\n", i, image.width(), leftw[i], rightw[i]);
         CImg<unsigned char> img = image.get_crop(leftw[i],0,0,0,rightw[i],image.height()-1,0,image.spectrum()-1);
         if (i==8) ++nxt;
-        if (line16[nxt] == 'u') {
+        if (line16[nxt] == 'u' and img.width()>2 and img.height()>2) {
             bool w = false;
             if (img(img.width()/2,img.height()/2,0)<127) w = true;
             if (img(img.width()/2-1,img.height()/2,0)<127) w = true;
@@ -570,7 +571,7 @@ string Image::recognize_2()
     if (oldline != line16)
         cout << "      Result fix : "<<line16<<endl;  
    
-    
+        //printf("# OCR debug #2\n");
     //check
     
     return line16;
@@ -642,7 +643,8 @@ void Image::findChar()
     //printf("down=%d\n", down);
     
     int last = -1;
-    int mx1 = 0, mx2 = 0;
+    int mx1 = 0, mx2 = 0, mx3 = 0;
+    int len = 0, mxlen = 0;
     for (j = midw - w / 4; j < w; ++j) {
         bool black = false;
         for (i = top; i <= down; ++i)
@@ -651,16 +653,25 @@ void Image::findChar()
                 break;
             }
         if (black) {
+            ++len;
+            if (len>mxlen) mxlen=len;
             if (last >= 0) {
                 int delta = j - last - 1;
+                if (mx3 > 0 && delta>mxlen*3) break;
                 if (delta > mx1) {
+                    mx3 = mx2;
                     mx2 = mx1;
                     mx1 = delta;
                 } else if (delta > mx2) {
+                    mx3 = mx2;
                     mx2 = delta;
+                } else if (delta > mx3) {
+                    mx3 = delta;
                 }
             }
             last = j;
+        } else {
+            len = 0;
         }
     }
     //printf("mx1=%d mx2=%d\n", mx1, mx2);
