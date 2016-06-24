@@ -443,6 +443,15 @@ static int getTopPixes(const CImg<unsigned char>& img)
     return sum;
 }
 
+static int getDownPixes(const CImg<unsigned char>& img)
+{
+    int sum = 0;
+    for (int hh = img.height()-img.height()/8; hh < img.height(); ++hh)
+        for (int ww = 0; ww < img.width(); ++ww)
+            if (img(ww,hh,0)<127) ++sum;
+    return sum;
+}
+
 string Image::recognize_2()
 {
     int w=image.width();
@@ -547,6 +556,9 @@ string Image::recognize_2()
                 line16[nxt] = 'g';
             else
                 line16[nxt] = '9';
+        } else if (line16[nxt] == 'i') {
+            if (getDownPixes(img)>0)
+                line16[nxt] = 'j';
         }
         ++nxt;
         if (debug) {
