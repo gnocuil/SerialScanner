@@ -203,7 +203,7 @@ vector<string> Image::search(int threshold_)
             if (per > 0.5) continue;//compare with WHOLE picture witout cropping
             if (ratio < 2) continue;//should be a LONG area
             //printf("        %d: cnt=%d area=%d ratio=%.2lf per=%.5lf sparse=%.2lf\n",tot,cnt,area,ratio,per,sparse);
-            printf("found area! tot=%d area=%d cnt=%d sparse=%.2lf per=%.2lf ratio=%.2lf\n",tot,area,cnt,sparse,per,ratio);  
+            if (debug) printf("found area! tot=%d area=%d cnt=%d sparse=%.2lf per=%.2lf ratio=%.2lf\n",tot,area,cnt,sparse,per,ratio);  
             //tbfs.current("BFS");
             char prefix[100] = {0};
             sprintf(prefix, "part%d_", tot++);
@@ -409,7 +409,7 @@ string Image::recognize()
 {
     //int w=image.width();
     //int h=image.height();
-    cout<<"    recognize: "<<(prefix+".jpg")<<endl;
+    if (debug) cout<<"    recognize: "<<(prefix+".jpg")<<endl;
     if (SHOW_ROTATE or debug) save("orig");
     //countLine();
     
@@ -429,7 +429,7 @@ string Image::recognize()
     Timer t2;
     vector<Image> vi = cut();
     //t2.current("Cut image");
-    printf("    cut images into: %d parts\n", (int)vi.size());
+    if (debug) printf("    cut images into: %d parts\n", (int)vi.size());
     for (int i = 0; i < vi.size(); ++i) {
         //string filename=vi[i].prefix+"T1.jpg";
         //cout<<"FN: "<<filename<<endl;
@@ -524,17 +524,17 @@ string Image::recognize_2()
     }
     if (leftw[cnt] >= 0) ++cnt;
     if (cnt != NUM1+NUM2) {
-        printf("    number of char not match 8+8, skip OCR!\n");
+        if (debug) printf("    number of char not match 8+8, skip OCR!\n");
         return "";
     }
     
     Timer tt;
     string line16 = ocr16(image);
     //tt.current("ocr16");
-    if (line16.size() > 0)
-        cout << "    OCR LINE : "<<line16<<endl;  
-    else {
-        cout << "    Failed OCR"<<line16<<endl;  
+    if (line16.size() > 0) {
+        if (debug) cout << "    OCR LINE : "<<line16<<endl;  
+    } else {
+        if (debug) cout << "    Failed OCR"<<line16<<endl;  
         return "";
     }
     string oldline = line16;

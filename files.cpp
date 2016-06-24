@@ -31,7 +31,7 @@ vector<string> single(string filename, int threshold = -1)
     //printf("single %s\n", filename.c_str());
     
     Image img(filename);
-
+    
     img.debug = debug;
     vector<string> ret;
     if (threshold >= 0) {
