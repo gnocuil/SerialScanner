@@ -6,6 +6,7 @@
 #include "images.h"
 #include "ocr.h"
 #include "timer.h"
+#include "my_exif.h"
 
 #define SHOW_ROTATE 1
 
@@ -24,10 +25,17 @@ static void setColor(CImg<unsigned char>& img, int w, int h, int color)
 
 Image::Image(string filename)
 {
+    int ori = Orientation(filename.c_str());
+
     debug = 0;
     threshold = 140;//TODO: default threshold
     printf("Image file %s\n", filename.c_str());
     image = CImg<unsigned char>(filename.c_str());
+    
+    if (ori == 6) {//right rotate
+        image.rotate(90);
+    }
+    
     //printf("ok width=%d height=%d depth=%d spectrum=%d\n", image.width(), image.height(), image.depth(), image.spectrum());
     //if (image.width()>image.height())
     //    image.rotate(90);

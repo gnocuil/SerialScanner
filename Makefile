@@ -1,7 +1,7 @@
 CC     := g++
-CFLAGS := -O2 -lpthread -Dcimg_display=0 -Wno-unused-result -llept -ltesseract
+CFLAGS := -O2 -lpthread -Dcimg_display=0 -Wno-unused-result -llept -ltesseract -std=c++11
 TARGET := serialscanner
-OBJS   := main.o images.o files.o ocr.o 
+OBJS   := main.o images.o files.o ocr.o my_exif.o exif.o 
 
 all: $(TARGET)
 

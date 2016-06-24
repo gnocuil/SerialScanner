@@ -29,13 +29,15 @@ void printRoot(const vector<string>& ret, string filename)
 vector<string> single(string filename, int threshold = -1)
 {
     //printf("single %s\n", filename.c_str());
+    
     Image img(filename);
+
     img.debug = debug;
     vector<string> ret;
     if (threshold >= 0) {
         ret = img.search(threshold);
     } else {
-        int ths[] = {160, 100, 130, 180};
+        int ths[] = {160, 100, 130, 180, 50};
         int n = sizeof(ths)/sizeof(int);
         
         for (int i = 0; i < n; ++i) {
