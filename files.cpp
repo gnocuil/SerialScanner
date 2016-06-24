@@ -10,7 +10,7 @@
 
 using namespace std;
 
-static int debug = 0;
+int debug;
 
 static int rid = 0;
 static FILE *fout_root = NULL;
@@ -28,7 +28,6 @@ void printRoot(const vector<string>& ret, string filename)
 
 vector<string> single(string filename, int threshold = -1)
 {
-    debug = 1;
     //printf("single %s\n", filename.c_str());
     Image img(filename);
     img.debug = debug;
@@ -64,7 +63,6 @@ static vector<string> _multiple(string dirname, int depth)
     vector<string> ret;
     if (depth == 0) return ret;
     
-    debug = 0;
     string sn = dirname + "/_sn_.csv";
     
     //ofstream fout(sn);

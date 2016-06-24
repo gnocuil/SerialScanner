@@ -18,6 +18,7 @@ void help()
 
 int main(int argc, char **argv)
 {
+    debug = 0;
     system("rm -f debug/*");
     string filename = "";
     string folder = "";
@@ -46,6 +47,7 @@ int main(int argc, char **argv)
     }
     
     if (filename.size() > 0) {
+        debug = 1;
         vector<string> ret = single(filename, threshold);
         if (ret.size() > 0) {
             printf("result numbers: %d\n", (int)ret.size());
